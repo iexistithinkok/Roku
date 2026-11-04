@@ -1,0 +1,14 @@
+title=Hyperlocal Channel
+version=1.0.0
+description=Your local news, events, and community content — scheduled like a real TV channel.
+graphic_format=png
+subtitle=Hyperlocal TV
+screens=[]
+debug=yes
+icon=images/icon.png
+# Live TV capabilities
+allow_screensaver=false
+# Schedule editor URL (for your own use, not shown on TV)
+schedule_editor_url=https://my-hyperlocal-channel.your-subdomain.workers.dev/schedule-editor.html
+# API endpoints
+api_base_url=https://my-hyperlocal-channel.your-subdomain.workers.dev

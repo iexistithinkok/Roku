@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<strings>
+    <!-- App name displayed on the Roku home screen -->
+    <string id="APP_NAME">My Roku App</string>
+
+    <!-- UI Labels -->
+    <string id="TITLE_LABEL">Welcome</string>
+    <string id="LOADING">Loading...</string>
+    <string id="NO_CONTENT">No content available</string>
+    <string id="ERROR">An error occurred</string>
+
+    <!-- Error codes -->
+    <string id="ERR_NETWORK">Could not connect to the server. Please check your internet connection.</string>
+    <string id="ERR_AUTH">Authentication failed. Please try logging in again.</string>
+    <string id="ERR_PARSE">Failed to parse response data.</string>
+
+    <!-- Navigation -->
+    <string id="NAV_BACK">Back</string>
+    <string id="NAV_HOME">Home</string>
+    <string id="NAV_SETTINGS">Settings</string>
+
+    <!-- Messages -->
+    <string id="MSG_OK">OK</string>
+    <string id="MSG_CANCEL">Cancel</string>
+    <string id="MSG_SAVE">Save</string>
+    <string id="MSG_DELETE">Delete</string>
+    <string id="MSG_RETRY">Retry</string>
+
+</strings>

@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hyperlocal Channel — Schedule Editor</title>
+  <style>
+    :root {
+      --bg: #0f1923; --surface: #1a2733; --border: #2a3f50;
+      --accent: #4fc3f7; --accent-hover: #29b6f6;
+      --text: #e0e0e0; --muted: #8899aa; --success: #66bb6a; --danger: #ef5350;
+      --radius: 8px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg); color: var(--text); padding: 20px;
+    }
+    h1 { font-size: 1.5em; margin-bottom: 5px; color: var(--accent); }
+    h2 { font-size: 1.1em; margin: 20px 0 10px; color: var(--accent); }
+    .subtitle { color: var(--muted); font-size: 0.9em; margin-bottom: 20px; }
+    .config-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 15px; margin-bottom: 20px;
+    }
+    .config-panel label { display: block; font-size: 0.85em; color: var(--muted); margin-bottom: 4px; }
+    .config-panel input {
+      width: 100%; padding: 8px 12px; background: var(--bg); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius); font-size: 0.95em;
+    }
+    .config-panel input:focus { outline: none; border-color: var(--accent); }
+    .tabs { display: flex; gap: 5px; margin-bottom: 20px; }
+    .tab-btn {
+      padding: 10px 20px; background: var(--surface); border: 1px solid var(--border);
+      color: var(--muted); border-radius: var(--radius) var(--radius) 0 0;
+      cursor: pointer; font-size: 0.95em; transition: all 0.2s;
+    }
+    .tab-btn.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+    .tab-btn:hover:not(.active) { color: var(--text); }
+    .tab { display: none; }
+    .tab.active { display: block; }
+
+    /* Schedule grid */
+    .schedule-grid {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden;
+    }
+    .day-row {
+      border-bottom: 1px solid var(--border);
+    }
+    .day-header {
+      background: var(--bg); padding: 10px 15px; font-weight: 600;
+      color: var(--accent); display: flex; justify-content: space-between;
+      align-items: center;
+    }
+    .program-row {
+      display: flex; align-items: center; padding: 8px 15px;
+      border-bottom: 1px solid rgba(42, 63, 80, 0.5);
+      transition: background 0.15s;
+    }
+    .program-row:hover { background: rgba(79, 195, 247, 0.05); }
+    .program-time {
+      min-width: 100px; color: var(--accent); font-family: monospace; font-size: 0.9em;
+    }
+    .program-title { flex: 1; }
+    .program-meta { color: var(--muted); font-size: 0.85em; }
+    .program-actions { display: flex; gap: 8px; }
+    .btn {
+      padding: 6px 14px; border: 1px solid var(--border); background: var(--bg);
+      color: var(--text); border-radius: var(--radius); cursor: pointer;
+      font-size: 0.85em; transition: all 0.2s;
+    }
+    .btn:hover { border-color: var(--accent); }
+    .btn-primary { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-danger { border-color: var(--danger); color: var(--danger); }
+    .btn-danger:hover { background: var(--danger); color: white; }
+    .btn-sm { padding: 4px 10px; font-size: 0.8em; }
+
+    /* Form */
+    .form-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 15px;
+    }
+    .form-grid .full-width { grid-column: 1 / -1; }
+    .form-group label { display: block; font-size: 0.85em; color: var(--muted); margin-bottom: 4px; }
+    .form-group input, .form-group select {
+      width: 100%; padding: 8px 12px; background: var(--bg);
+      border: 1px solid var(--border); color: var(--text); border-radius: var(--radius);
+    }
+    .form-actions { grid-column: 1 / -1; display: flex; gap: 10px; margin-top: 10px; }
+
+    /* Status badges */
+    .badge {
+      display: inline-block; padding: 2px 8px; border-radius: 10px;
+      font-size: 0.75em; font-weight: 600;
+    }
+    .badge-live { background: var(--success); color: white; }
+    .badge-off { background: var(--muted); color: var(--bg); }
+    .badge-fill { background: #ffa726; color: var(--bg); }
+
+    /* Toast */
+    .toast {
+      position: fixed; bottom: 20px; right: 20px; padding: 12px 20px;
+      background: var(--success); color: white; border-radius: var(--radius);
+      font-size: 0.9em; opacity: 0; transform: translateY(10px);
+      transition: all 0.3s; pointer-events: none;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+
+    /* Empty state */
+    .empty {
+      text-align: center; padding: 40px; color: var(--muted);
+    }
+
+    /* Week nav */
+    .week-nav {
+      display: flex; align-items: center; gap: 15px; margin-bottom: 15px;
+    }
+    .week-nav button {
+      padding: 6px 14px; background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius); cursor: pointer;
+    }
+    .week-label { font-weight: 600; min-width: 200px; text-align: center; }
+
+    /* Live toggle */
+    .live-toggle {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 10px 15px; margin-bottom: 15px;
+    }
+    .toggle-switch {
+      position: relative; width: 48px; height: 26px;
+      background: var(--border); border-radius: 13px; cursor: pointer;
+      transition: background 0.3s;
+    }
+    .toggle-switch.active { background: var(--success); }
+    .toggle-switch::after {
+      content: ''; position: absolute; top: 3px; left: 3px;
+      width: 20px; height: 20px; background: white; border-radius: 50%;
+      transition: transform 0.3s;
+    }
+    .toggle-switch.active::after { transform: translateX(22px); }
+  </style>
+</head>
+<body>
+
+<h1>📺 Hyperlocal Channel — Schedule Editor</h1>
+<p class="subtitle">Create, edit, and manage your TV schedule. Changes update the Roku channel in real time.</p>
+
+<!-- Configuration Panel -->
+<div class="config-panel">
+  <label>Cloudflare Worker URL</label>
+  <input type="text" id="workerUrl" placeholder="https://my-hyperlocal-channel.your-subdomain.workers.dev" value="">
+</div>
+
+<!-- Live Status Toggle -->
+<div class="live-toggle">
+  <span>Live Channel Mode:</span>
+  <div class="toggle-switch" id="liveToggle" onclick="toggleLive()"></div>
+  <span id="liveStatus">OFF</span>
+  <span style="color: var(--muted); font-size: 0.8em; margin-left: auto;">
+    When ON, Roku follows the schedule in real time
+  </span>
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('weekly')">📅 Weekly Schedule</button>
+  <button class="tab-btn" onclick="switchTab('add')">➕ Add Program</button>
+  <button class="tab-btn" onclick="switchTab('library')">📚 Content Library</button>
+  <button class="tab-btn" onclick="switchTab('export')">💾 Export/Import</button>
+  <button class="tab-btn" onclick="switchTab('upload')">🎬 Upload Videos</button>
+</div>
+
+<!-- WEEKLY SCHEDULE TAB -->
+<div class="tab active" id="tab-weekly">
+  <div class="week-nav">
+    <button onclick="changeWeek(-1)">← Previous</button>
+    <span class="week-label" id="weekLabel">Loading...</span>
+    <button onclick="changeWeek(1)">Next →</button>
+    <button class="btn btn-sm btn-primary" onclick="generateWeekly()">⚡ Generate Week</button>
+  </div>
+  <div id="weeklyView"></div>
+</div>
+
+<!-- ADD PROGRAM TAB -->
+<div class="tab" id="tab-add">
+  <div class="form-grid" style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px;">
+    <div class="form-group">
+      <label>Content ID (from your content library)</label>
+      <input type="text" id="formContentId" placeholder="e.g., 001">
+    </div>
+    <div class="form-group">
+      <label>Day of Week</label>
+      <select id="formDay">
+        <option value="Monday">Monday</option>
+        <option value="Tuesday">Tuesday</option>
+        <option value="Wednesday">Wednesday</option>
+        <option value="Thursday">Thursday</option>
+        <option value="Friday">Friday</option>
+        <option value="Saturday">Saturday</option>
+        <option value="Sunday">Sunday</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Start Time (HH:MM, 24hr)</label>
+      <input type="time" id="formTime" value="18:00">
+    </div>
+    <div class="form-group">
+      <label>Duration (minutes)</label>
+      <input type="number" id="formDuration" value="30" min="1" max="480">
+    </div>
+    <div class="form-group full-width">
+      <label>Title (overrides content title if set)</label>
+      <input type="text" id="formTitle" placeholder="Program display name">
+    </div>
+    <div class="form-group">
+      <label>Recurring</label>
+      <select id="formRepeat">
+        <option value="">One time only</option>
+        <option value="daily">Every day</option>
+        <option value="weekly">Same day each week</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Number of Weeks</label>
+      <input type="number" id="formWeeks" value="1" min="1" max="52">
+    </div>
+    <div class="form-group">
+      <label>Category</label>
+      <select id="formCategory">
+        <option value="">Use content default</option>
+        <option value="news">News</option>
+        <option value="events">Events</option>
+        <option value="community">Community</option>
+        <option value="interviews">Interviews</option>
+        <option value="sports">Sports</option>
+        <option value="kids">Kids</option>
+        <option value="live">Live Event</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Priority (affects "now playing" sorting)</label>
+      <select id="formPriority">
+        <option value="0">Normal</option>
+        <option value="1">High</option>
+        <option value="2">Promo / Break</option>
+      </select>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-primary" onclick="addProgram()">Add to Schedule</button>
+      <button class="btn" onclick="resetForm()">Clear</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONTENT LIBRARY TAB -->
+<div class="tab" id="tab-library">
+  <div id="libraryView" class="schedule-grid"></div>
+</div>
+
+<!-- EXPORT/IMPORT TAB -->
+<div class="tab" id="tab-export">
+  <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px;">
+    <h2>Export Schedule</h2>
+    <p style="color: var(--muted); margin: 10px 0;">Export your schedule to JSON for backup or transfer.</p>
+    <button class="btn btn-primary" onclick="exportSchedule()">Export Current Schedule</button>
+
+    <hr style="border-color: var(--border); margin: 20px 0;">
+
+    <h2>Import Schedule</h2>
+    <p style="color: var(--muted); margin: 10px 0;">Import a previously exported schedule JSON file.</p>
+    <input type="file" id="importFile" accept=".json" style="margin: 10px 0;">
+    <button class="btn" onclick="importSchedule()">Import Schedule</button>
+  </div>
+</div>
+
+<!-- UPLOAD VIDEOS TAB -->
+<div class="tab" id="tab-upload">
+  <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px;">
+    <h2>Upload Videos from Your Computer</h2>
+    <p style="color: var(--muted); margin: 10px 0 20px;">
+      Select video files from your local machine. They'll be uploaded to your Cloudflare R2 bucket and registered in your content library.
+      You can then schedule them or play them on-demand.
+    </p>
+
+    <!-- Drop zone -->
+    <div id="dropZone" style="border: 2px dashed var(--border); border-radius: var(--radius); padding: 40px; text-align: center; cursor: pointer; transition: all 0.2s;"
+       ondragover="event.preventDefault(); this.style.borderColor='var(--accent)';"
+       ondragleave="this.style.borderColor='var(--border)';"
+       ondrop="handleDrop(event); this.style.borderColor='var(--border)';">
+      <div style="font-size: 2em; margin-bottom: 10px;">📁</div>
+      <div style="font-size: 1.1em; margin-bottom: 5px;">Drop video files here or click to browse</div>
+      <div style="color: var(--muted); font-size: 0.85em;">Supports MP4, MOV, MKV, AVI, WebM</div>
+      <input type="file" id="fileInput" multiple accept="video/*" style="display: none;" onchange="handleFiles(this.files);">
+      <button class="btn btn-primary" style="margin-top: 15px;" onclick="document.getElementById('fileInput').click();">Browse Files</button>
+    </div>
+
+    <!-- Upload progress -->
+    <div id="uploadProgress" style="margin-top: 20px; display: none;">
+      <h3 style="margin-bottom: 15px;">Uploading...</h3>
+      <div id="fileList"></div>
+    </div>
+
+    <!-- Upload complete with metadata form -->
+    <div id="uploadComplete" style="margin-top: 20px; display: none;">
+      <h3 style="margin-bottom: 15px;">✅ Uploads Complete — Edit Metadata</h3>
+      <p style="color: var(--muted); font-size: 0.9em; margin-bottom: 15px;">
+        Files are now in your R2 bucket. Fill in metadata below so the Roku channel can display them properly.
+      </p>
+      <div id="uploadedFiles"></div>
+      <button class="btn btn-primary" style="margin-top: 15px;" onclick="registerAllUploaded()">Register All to Content Library</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast Notification -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── State ────────────────────────────────────────────────────────────────
+let currentWeekStart = getMonday(new Date());
+let scheduleData = {};
+
+// ─── Helpers ──────────────────────────────────────────────────────────────
+function getWorkerUrl() {
+  const stored = localStorage.getItem('hyperlocal_worker_url');
+  return stored || document.getElementById('workerUrl').value;
+}
+
+function saveWorkerUrl() {
+  localStorage.setItem('hyperlocal_worker_url', document.getElementById('workerUrl').value);
+}
+
+function getMonday(d) {
+  const date = new Date(d);
+  const day = date.getDay();
+  const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+  return new Date(date.setDate(diff));
+}
+
+function formatDate(d) {
+  return d.toISOString().split('T')[0];
+}
+
+function getWeekRange(monday) {
+  const days = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday);
+    d.setDate(d.getDate() + i);
+    days.push(d);
+  }
+  return days;
+}
+
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
+// ─── Tab switching ────────────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelector(`[onclick="switchTab('${name}')"]`).classList.add('active');
+  document.getElementById(`tab-${name}`).classList.add('active');
+
+  if (name === 'weekly') loadWeekly();
+  if (name === 'library') loadLibrary();
+  if (name === 'add') loadLibraryForForm();
+  if (name === 'export') { /* nothing special needed */ }
+}
+
+// ─── API calls ────────────────────────────────────────────────────────────
+async function api(action, params = {}) {
+  const url = new URL(`/api/schedule`, getWorkerUrl());
+  url.searchParams.set('action', action);
+  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+
+  const res = await fetch(url.toString());
+  const body = await res.json();
+  if (body.error) {
+    showToast(`Error: ${body.error}`);
+    throw body;
+  }
+  return body;
+}
+
+// ─── Weekly View ──────────────────────────────────────────────────────────
+async function loadWeekly() {
+  const data = await api('list-weekly', { weekStart: formatDate(currentWeekStart) });
+
+  const container = document.getElementById('weeklyView');
+  const label = document.getElementById('weekLabel');
+  const endDate = getWeekRange(currentWeekStart)[6];
+  label.textContent = `${formatDate(currentWeekStart)} — ${formatDate(endDate)}`;
+
+  if (data.entries.length === 0) {
+    container.innerHTML = '<div class="empty">No scheduled programs this week. Go to "Add Program" to create one.</div>';
+    return;
+  }
+
+  // Group by day
+  const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+  let html = '';
+
+  for (const day of days) {
+    const dayEntries = data.entries.filter(e => e.day === day).sort((a, b) => a.startTime.localeCompare(b.startTime));
+
+    html += `<div class="day-row">`;
+    html += `<div class="day-header">
+      <span>${day}</span>
+      <span style="font-size: 0.8em; color: var(--muted);">${dayEntries.length} programs</span>
+    </div>`;
+
+    if (dayEntries.length === 0) {
+      html += `<div class="program-row"><span style="color: var(--muted); padding: 8px 15px;">No programs scheduled</span></div>`;
+    } else {
+      for (const entry of dayEntries) {
+        const title = entry.title || entry.contentId || '?';
+        const dur = entry.duration ? ` (${Math.round(entry.duration / 60)}m)` : '';
+        const liveBadge = entry.isLive ? '<span class="badge badge-live">LIVE</span>' : '';
+        const fillBadge = entry.isFill ? '<span class="badge badge-fill">FILL</span>' : '';
+
+        html += `<div class="program-row">
+          <span class="program-time">${entry.startTime}</span>
+          <span class="program-title">${title}${dur}</span>
+          <span class="program-meta">${liveBadge}${fillBadge}</span>
+          <span class="program-actions">
+            <button class="btn btn-sm" onclick="editEntry('${entry.scheduleId}')">Edit</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteEntry('${entry.scheduleId}')">Delete</button>
+          </span>
+        </div>`;
+      }
+    }
+    html += `</div>`;
+  }
+
+  container.innerHTML = html;
+}
+
+// ─── Library View ─────────────────────────────────────────────────────────
+async function loadLibrary() {
+  const data = await api('library');
+  const container = document.getElementById('libraryView');
+
+  if (data.contents.length === 0) {
+    container.innerHTML = '<div class="empty">No content in your library. Add videos via Cloudflare Stream first.</div>';
+    return;
+  }
+
+  let html = '';
+  for (const item of data.contents) {
+    html += `<div class="program-row">
+      <span class="program-title"><strong>${item.title}</strong></span>
+      <span class="program-meta">${item.category || 'general'} | ${item.location || 'anywhere'}</span>
+      <span class="program-actions">
+        <span style="font-size: 0.8em; color: var(--accent); margin-right: 8px;">ID: ${item.id}</span>
+      </span>
+    </div>`;
+  }
+  container.innerHTML = html;
+}
+
+async function loadLibraryForForm() {
+  const data = await api('library');
+  const select = document.getElementById('formContentId');
+  select.innerHTML = '<option value="">— Select content —</option>';
+  for (const item of data.contents) {
+    select.innerHTML += `<option value="${item.id}">${item.title} (${item.id})</option>`;
+  }
+  select.onchange = () => {
+    const selected = data.contents.find(c => c.id === select.value);
+    if (selected) document.getElementById('formTitle').value = selected.title;
+  };
+}
+
+// ─── Actions ──────────────────────────────────────────────────────────────
+async function addProgram() {
+  const contentId = document.getElementById('formContentId').value;
+  if (!contentId) { showToast('Please select a content item'); return; }
+
+  const data = {
+    contentId,
+    day: document.getElementById('formDay').value,
+    time: document.getElementById('formTime').value,
+    duration: parseInt(document.getElementById('formDuration').value) * 60,
+    title: document.getElementById('formTitle').value,
+    repeat: document.getElementById('formRepeat').value,
+    weeks: parseInt(document.getElementById('formWeeks').value),
+    category: document.getElementById('formCategory').value,
+    priority: parseInt(document.getElementById('formPriority').value)
+  };
+
+  await api('add', data);
+  showToast(`✓ Added "${data.title || data.contentId}" to schedule`);
+  resetForm();
+  loadWeekly();
+  saveWorkerUrl();
+}
+
+async function deleteEntry(scheduleId) {
+  if (!confirm('Remove this program from the schedule?')) return;
+  await api('remove', { scheduleId });
+  showToast(`✓ Removed from schedule`);
+  loadWeekly();
+}
+
+async function editEntry(scheduleId) {
+  const data = await api('get', { scheduleId });
+  if (!data) return;
+
+  // Populate form with existing data
+  document.getElementById('formContentId').value = data.contentId;
+  document.getElementById('formDay').value = data.day;
+  document.getElementById('formTime').value = data.startTime;
+  document.getElementById('formDuration').value = Math.round((data.duration || 0) / 60);
+  document.getElementById('formTitle').value = data.title || '';
+  document.getElementById('formRepeat').value = data.repeat || '';
+  document.getElementById('formWeeks').value = data.weeks || 1;
+
+  switchTab('add');
+}
+
+async function toggleLive() {
+  const toggle = document.getElementById('liveToggle');
+  const isOn = toggle.classList.toggle('active');
+  document.getElementById('liveStatus').textContent = isOn ? 'ON' : 'OFF';
+  await api('set-live', { enabled: isOn ? '1' : '0' });
+  showToast(`Live channel ${isOn ? 'enabled' : 'disabled'}`);
+}
+
+function changeWeek(delta) {
+  currentWeekStart.setDate(currentWeekStart.getDate() + (delta * 7));
+  loadWeekly();
+}
+
+async function generateWeekly() {
+  await api('generate-weekly', { weekStart: formatDate(currentWeekStart) });
+  showToast('✓ Weekly schedule generated');
+  loadWeekly();
+}
+
+function exportSchedule() {
+  api('export').then(data => {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `schedule-${formatDate(currentWeekStart)}.json`;
+    a.click();
+  });
+}
+
+async function importSchedule() {
+  const file = document.getElementById('importFile').files[0];
+  if (!file) { showToast('Please select a file'); return; }
+
+  const text = await file.text();
+  const data = JSON.parse(text);
+
+  await api('import-schedule', { data: JSON.stringify(data) });
+  showToast('✓ Schedule imported successfully');
+  loadWeekly();
+}
+
+function resetForm() {
+  document.getElementById('formContentId').value = '';
+  document.getElementById('formTime').value = '18:00';
+  document.getElementById('formDuration').value = '30';
+  document.getElementById('formTitle').value = '';
+  document.getElementById('formRepeat').value = '';
+  document.getElementById('formWeeks').value = '1';
+  document.getElementById('formCategory').value = '';
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────
+document.getElementById('workerUrl').value = getWorkerUrl() || '';
+document.getElementById('workerUrl').addEventListener('change', saveWorkerUrl);
+loadWeekly();
+
+// ─── Upload Functions (NEW) ────────────────────────────────────────────────
+let pendingUploads = []; // Track files being uploaded
+
+function handleDrop(event) {
+  event.preventDefault();
+  const files = event.dataTransfer.files;
+  if (files.length > 0) handleFiles(files);
+}
+
+async function handleFiles(files) {
+  if (!files || files.length === 0) return;
+
+  const progressDiv = document.getElementById('uploadProgress');
+  const fileListDiv = document.getElementById('fileList');
+  const completeDiv = document.getElementById('uploadComplete');
+  const uploadedFilesDiv = document.getElementById('uploadedFiles');
+
+  progressDiv.style.display = 'block';
+  completeDiv.style.display = 'none';
+  uploadedFilesDiv.innerHTML = '';
+  fileListDiv.innerHTML = '';
+
+  pendingUploads = [];
+
+  for (const file of files) {
+    if (!file.type.startsWith('video/')) {
+      showToast(`Skipped: ${file.name} (not a video)`);
+      continue;
+    }
+
+    // Create a progress entry
+    const entryId = 'upload_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+    const entryDiv = document.createElement('div');
+    entryDiv.className = 'program-row';
+    entryDiv.id = entryId;
+    entryDiv.innerHTML = `
+      <span class="program-title">${file.name}</span>
+      <span class="program-meta">${formatFileSize(file.size)}</span>
+      <span id="${entryId}_status" style="color: var(--accent);">Uploading...</span>
+    `;
+    fileListDiv.appendChild(entryDiv);
+
+    // Generate a filename for R2
+    const ext = file.name.split('.').pop().toLowerCase();
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_').toLowerCase();
+    const r2Key = `videos/${entryId}.${ext}`;
+
+    // Start upload
+    const uploadResult = await uploadVideo(file, r2Key, entryId);
+    if (uploadResult.success) {
+      pendingUploads.push({
+        uploadId: uploadResult.uploadId,
+        r2Key,
+        originalName: file.name,
+        size: file.size,
+        contentType: file.type
+      });
+    }
+  }
+
+  // After all uploads, show metadata forms
+  if (pendingUploads.length > 0) {
+    setTimeout(() => {
+      progressDiv.style.display = 'none';
+      completeDiv.style.display = 'block';
+      renderUploadedFiles();
+      showToast(`✓ ${pendingUploads.length} video(s) uploaded successfully`);
+    }, 1500);
+  }
+}
+
+async function uploadVideo(file, r2Key, entryId) {
+  const url = new URL('/api/r2/proxy-upload', getWorkerUrl());
+  url.searchParams.set('key', r2Key);
+  url.searchParams.set('contentType', file.type);
+  url.searchParams.set('originalName', file.name);
+
+  try {
+    const xhr = new XMLHttpRequest();
+    const entryStatusEl = document.getElementById(`${entryId}_status`);
+
+    return new Promise((resolve, reject) => {
+      xhr.open('POST', url.toString(), true);
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) {
+          const pct = Math.round((e.loaded / e.total) * 100);
+          entryStatusEl.textContent = `Uploading... ${pct}%`;
+        }
+      };
+      xhr.onload = () => {
+        if (xhr.status === 200) {
+          entryStatusEl.textContent = '✓ Complete';
+          entryStatusEl.style.color = 'var(--success)';
+          resolve(JSON.parse(xhr.responseText));
+        } else {
+          entryStatusEl.textContent = '✗ Failed';
+          entryStatusEl.style.color = 'var(--danger)';
+          reject(new Error(xhr.responseText));
+        }
+      };
+      xhr.onerror = () => {
+        entryStatusEl.textContent = '✗ Network error';
+        entryStatusEl.style.color = 'var(--danger)';
+        reject(new Error('Network error'));
+      };
+      xhr.send(file);
+    });
+  } catch (err) {
+    const entryStatusEl = document.getElementById(`${entryId}_status`);
+    entryStatusEl.textContent = '✗ Error';
+    entryStatusEl.style.color = 'var(--danger)';
+    showToast(`Upload failed for ${file.name}: ${err.message}`);
+    return { success: false, error: err.message };
+  }
+}
+
+function renderUploadedFiles() {
+  const container = document.getElementById('uploadedFiles');
+  container.innerHTML = '';
+
+  pendingUploads.forEach((upload, index) => {
+    const card = document.createElement('div');
+    card.style.cssText = 'background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 15px; margin-bottom: 10px;';
+
+    // Generate a unique content ID
+    const contentId = `vid_${Date.now()}_${index}`;
+
+    card.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+        <div style="flex: 1;">
+          <label style="font-size: 0.85em; color: var(--muted); display: block; margin-bottom: 5px;">File: ${upload.originalName}</label>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div class="form-group">
+              <input type="text" class="meta-field" data-upload-index="${index}" data-field="title" placeholder="Title (e.g., Downtown Festival 2025)" value="" style="width: 100%; padding: 8px 12px; background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: var(--radius);">
+            </div>
+            <div class="form-group">
+              <input type="text" class="meta-field" data-upload-index="${index}" data-field="description" placeholder="Description" value="" style="width: 100%; padding: 8px 12px; background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: var(--radius);">
+            </div>
+            <div class="form-group">
+              <select class="meta-field" data-upload-index="${index}" data-field="category" style="width: 100%; padding: 8px 12px; background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: var(--radius);">
+                <option value="general">General</option>
+                <option value="news">News</option>
+                <option value="events">Events</option>
+                <option value="community">Community</option>
+                <option value="interviews">Interviews</option>
+                <option value="sports">Sports</option>
+                <option value="kids">Kids</option>
+                <option value="live">Live Event</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <input type="text" class="meta-field" data-upload-index="${index}" data-field="location" placeholder="Location (e.g., Downtown District)" value="" style="width: 100%; padding: 8px 12px; background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: var(--radius);">
+            </div>
+            <div class="form-group">
+              <input type="text" class="meta-field" data-upload-index="${index}" data-field="keywords" placeholder="Keywords (comma-separated)" value="" style="width: 100%; padding: 8px 12px; background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: var(--radius);">
+            </div>
+            <div class="form-group">
+              <input type="date" class="meta-field" data-upload-index="${index}" data-field="date" value="${formatDate(new Date())}" style="width: 100%; padding: 8px 12px; background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: var(--radius);">
+            </div>
+          </div>
+        </div>
+        <div class="program-actions">
+          <button class="btn btn-sm btn-danger" onclick="removeUpload(${index})">Remove</button>
+        </div>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+async function registerAllUploaded() {
+  const fields = document.querySelectorAll('.meta-field');
+  const results = [];
+
+  for (const upload of pendingUploads) {
+    const index = pendingUploads.indexOf(upload);
+    const title = document.querySelector(`.meta-field[data-upload-index="${index}"][data-field="title"]`).value || upload.originalName.split('.')[0];
+    const description = document.querySelector(`.meta-field[data-upload-index="${index}"][data-field="description"]`).value || '';
+    const category = document.querySelector(`.meta-field[data-upload-index="${index}"][data-field="category"]`).value || 'general';
+    const location = document.querySelector(`.meta-field[data-upload-index="${index}"][data-field="location"]`).value || '';
+    const keywords = document.querySelector(`.meta-field[data-upload-index="${index}"][data-field="keywords"]`).value || '';
+    const date = document.querySelector(`.meta-field[data-upload-index="${index}"][data-field="date"]`).value || formatDate(new Date());
+    const contentId = `vid_${Date.now()}_${index}`;
+
+    const url = new URL('/api/r2/completed', getWorkerUrl());
+    url.searchParams.set('uploadId', upload.uploadId);
+    url.searchParams.set('contentId', contentId);
+    url.searchParams.set('title', title);
+    url.searchParams.set('description', description);
+    url.searchParams.set('category', category);
+    url.searchParams.set('location', location);
+    url.searchParams.set('keywords', keywords);
+    url.searchParams.set('date', date);
+
+    try {
+      const res = await fetch(url.toString());
+      const data = await res.json();
+      if (data.success) {
+        results.push({ title, contentId });
+      } else {
+        showToast(`Error registering ${title}: ${data.error}`);
+      }
+    } catch (err) {
+      showToast(`Error registering ${title}: ${err.message}`);
+    }
+  }
+
+  if (results.length > 0) {
+    showToast(`✓ Registered ${results.length} video(s) to content library`);
+    // Clear uploads and reload
+    pendingUploads = [];
+    document.getElementById('uploadProgress').style.display = 'none';
+    document.getElementById('uploadComplete').style.display = 'none';
+    loadLibrary();
+  }
+}
+
+function removeUpload(index) {
+  pendingUploads.splice(index, 1);
+  renderUploadedFiles();
+  showToast('Removed from upload queue');
+}
+
+function formatFileSize(bytes) {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+</body>
+</html>

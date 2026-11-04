@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+    MainScene - The root UI component for the Roku app.
+    This defines the visual layout using Roku's node-based UI system.
+-->
+<component name="MainScene" extends="Scene">
+    <!-- Script references -->
+    <script type="text/brightscript" uri="MainScene.brs" />
+
+    <!-- Nodes are defined here -->
+    <children>
+        <!-- A Panel to hold our content -->
+        <Panel id="mainPanel"
+               bgColor="#000000"
+               opacity="100"
+               focusable="false">
+            <!-- Title Label -->
+            <Label id="titleLabel"
+                   text="My Roku App"
+                   font="font:largeBoldSystemFont"
+                   textColor="#FFFFFF"
+                   opacity="100"
+                   width="1200"
+                   wrap="false"
+                   horizontalOffset="60"
+                   verticalOffset="80" />
+
+            <!-- A RowList for displaying items (like a content grid) -->
+            <RowList id="contentRowList"
+                     position="60, 220"
+                     itemSize="[300, 450]"
+                     focusBitmapUri=""
+                     numColumns="4"
+                     numRows="3"
+                     verticalFocusBitmapUri=""
+                     focusCompression="none" />
+
+            <!-- A Label for status/info messages -->
+            <Label id="statusLabel"
+                   text="Select an item to view"
+                   font="font:mediumSystemFont"
+                   textColor="#AAAAAA"
+                   opacity="100"
+                   width="1200"
+                   wrap="true"
+                   horizontalOffset="60"
+                   verticalOffset="800" />
+
+            <!-- A Poster for single item detail view -->
+            <Poster id="detailPoster"
+                    width="600"
+                    height="400"
+                    visible="false"
+                    horizontalOffset="300"
+                    verticalOffset="150" />
+        </Panel>
+    </children>
+</component>

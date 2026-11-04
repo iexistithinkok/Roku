@@ -1,0 +1,20 @@
+name = "my-hyperlocal-channel"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+node_compat = true
+
+[vars]
+ROKU_CHANNEL_GUID = "your-roku-channel-guid-here"
+APP_NAME = "My Hyperlocal Channel"
+
+[[kv_namespaces]]
+id = "your-content-kv-namespace-id"
+binding = "CHANNEL_KV"
+
+[[kv_namespaces]]
+id = "your-schedule-kv-namespace-id"
+binding = "SCHEDULE_KV"
+
+[[r2_buckets]]
+binding = "VIDEOS_BUCKET"
+bucket_name = "my-channels-videos"

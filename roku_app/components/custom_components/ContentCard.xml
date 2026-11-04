@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+    ContentCard - A reusable card component for displaying media items.
+    Takes poster, title, and description via fields.
+-->
+<component name="ContentCard" extends="Group">
+    <script type="text/brightscript" uri="ContentCard.brs" />
+
+    <children>
+        <!-- Poster image -->
+        <Poster id="posterImage"
+                width="300"
+                height="450"
+                uri=""
+                visible="true" />
+
+        <!-- Title label below poster -->
+        <Label id="titleLabel"
+               text=""
+               font="font:mediumSystemFont"
+               textColor="#FFFFFF"
+               opacity="100"
+               width="300"
+               wrap="true"
+               verticalOffset="460"
+               focusable="true" />
+
+        <!-- Description label -->
+        <Label id="descLabel"
+               text=""
+               font="font:smallSystemFont"
+               textColor="#AAAAAA"
+               opacity="100"
+               width="300"
+               wrap="true"
+               verticalOffset="490" />
+    </children>
+</component>
